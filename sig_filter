@@ -1,0 +1,35 @@
+#!/usr/bin/env node
+const pgp = require('openpgp')
+
+const usage = 'sig_filter -f [keyId] < /path/to/sig.asc'
+
+const args = process.argv.slice(2)
+if (args.length < 2) {
+  console.error(usage)
+  process.exit(1)
+}
+
+(async function() {
+  let filterKeyID
+  while (args.length) {
+    const arg = args.shift()
+    if (arg.slice(0, 2) === '-f') {
+      filterKeyID = arg.slice(2) || args.shift()
+    }
+  }
+
+  let items = Buffer.alloc(0)
+  process.stdin.on('data', data => items = Buffer.concat([items, data]))
+  process.stdin.once('end', async () => {
+    const sigs = await pgp.readCleartextMessage({cleartextMessage: items.toString()})
+    const newSigPkts = new pgp.PacketList()
+    sigs.signature.packets.forEach(sigPkt => {
+      let keyID = Buffer.from(sigPkt.issuerKeyID.bytes, 'binary').toString('hex')
+      if (keyID.toLowerCase() != filterKeyID.toLowerCase()) {
+        newSigPkts.push(sigPkt)
+      }
+    })
+    const newSignature = new pgp.CleartextMessage(sigs.text, new pgp.Signature(newSigPkts))
+    process.stdout.write(newSignature.armor())
+  })
+})()

@@ -1,0 +1,9 @@
+{
+  "name": "sig_filter",
+  "version": "1.0.0",
+  "main": "sig_filter.js",
+  "license": "MIT",
+  "dependencies": {
+    "openpgp": "^5.9.0"
+  }
+}
